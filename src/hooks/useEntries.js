@@ -12,12 +12,11 @@ import { db, isConfigured } from '../firebase.js'
 
 const COLLECTION = 'entries'
 
-function sortEntries(entries) {
-  return [...entries].sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1
-    if (a.due !== b.due) return (a.due || '') < (b.due || '') ? -1 : 1
-    return 0
-  })
+// Stable insertion order so the Task No. column never shifts under sorting/filtering.
+function byCreated(a, b) {
+  const ta = a.createdAt?.seconds ?? Number.MAX_SAFE_INTEGER
+  const tb = b.createdAt?.seconds ?? Number.MAX_SAFE_INTEGER
+  return ta - tb
 }
 
 export function useEntries() {
@@ -31,7 +30,9 @@ export function useEntries() {
       collection(db, COLLECTION),
       (snapshot) => {
         const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-        setEntries(sortEntries(docs))
+        docs.sort(byCreated)
+        // Assign a permanent-feeling Task No. from insertion order.
+        setEntries(docs.map((d, i) => ({ ...d, no: i + 1 })))
         setLoading(false)
       },
       (err) => {
@@ -45,20 +46,23 @@ export function useEntries() {
   return { entries, loading, error }
 }
 
-export function addEntry({ type, subject, title, due, postedBy }) {
+const FIELDS = ['type', 'task', 'due', 'assignees', 'status', 'workType', 'deliverables']
+
+function pick(data) {
+  const out = {}
+  for (const f of FIELDS) out[f] = data[f] ?? ''
+  return out
+}
+
+export function addEntry(data) {
   return addDoc(collection(db, COLLECTION), {
-    type,
-    subject,
-    title,
-    due,
-    postedBy,
-    done: false,
+    ...pick(data),
     createdAt: serverTimestamp(),
   })
 }
 
-export function toggleDone(entry) {
-  return updateDoc(doc(db, COLLECTION, entry.id), { done: !entry.done })
+export function updateEntry(id, data) {
+  return updateDoc(doc(db, COLLECTION, id), pick(data))
 }
 
 export function deleteEntry(id) {
