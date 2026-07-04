@@ -194,15 +194,17 @@ body {
   font-size: 0.9rem;
 }
 
-.grid col.col-no { width: 46px; }
-.grid col.col-type { width: 118px; }
-.grid col.col-task { width: 34%; }
-.grid col.col-due { width: 150px; }
-.grid col.col-people { width: 150px; }
-.grid col.col-status { width: 118px; }
-.grid col.col-work { width: 108px; }
-.grid col.col-deliver { width: 150px; }
-.grid col.col-actions { width: 78px; }
+.grid { min-width: 1080px; }
+.grid col.col-no { width: 44px; }
+.grid col.col-type { width: 112px; }
+.grid col.col-subject { width: 118px; }
+.grid col.col-task { width: 28%; }
+.grid col.col-due { width: 148px; }
+.grid col.col-people { width: 138px; }
+.grid col.col-status { width: 114px; }
+.grid col.col-work { width: 104px; }
+.grid col.col-deliver { width: 142px; }
+.grid col.col-actions { width: 52px; }
 
 /* header */
 .head-row th {
@@ -253,7 +255,7 @@ body {
 
 /* body */
 .grid tbody td {
-  padding: 0.6rem 0.75rem;
+  padding: 0;
   border-right: 1px solid var(--line-soft);
   border-bottom: 1px solid var(--line);
   vertical-align: top;
@@ -261,6 +263,52 @@ body {
 }
 .grid tbody tr:nth-child(even) { background: rgba(10, 10, 10, 0.022); }
 .grid tbody tr:hover { background: rgba(192, 73, 31, 0.07); }
+
+/* click-to-edit cells fill the whole cell so any click enters edit */
+.cell-display {
+  padding: 0.55rem 0.7rem;
+  min-height: 2.1rem;
+}
+.cell-display.editable { cursor: text; outline: none; }
+.cell-display.editable:hover { box-shadow: inset 0 0 0 1px var(--line); }
+.cell-display.editable:focus-visible { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cell-empty { color: transparent; font-family: var(--display); font-size: 0.8rem; }
+.cell-display.editable:hover .cell-empty { color: var(--ink-faint); }
+
+.cell-input {
+  width: 100%;
+  font-family: var(--body);
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: #fffdf8;
+  border: none;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  padding: 0.5rem 0.6rem;
+  border-radius: 0;
+  outline: none;
+}
+textarea.cell-input { resize: vertical; line-height: 1.45; min-height: 4.5rem; }
+select.cell-input { font-family: var(--display); font-size: 0.82rem; }
+
+/* the persistent add-task row at the foot of the table */
+.add-row td { padding: 0; background: var(--paper); }
+.add-row button {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+  padding: 0.7rem 0.75rem;
+  background: transparent;
+  border: none;
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.add-row button:hover { background: rgba(192, 73, 31, 0.09); color: var(--accent); }
 
 .rownum { font-family: var(--display); font-weight: 500; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .tasktext { white-space: pre-line; }
@@ -317,7 +365,7 @@ body {
 
 /* row actions */
 .col-actions { white-space: nowrap; }
-.row-actions { display: flex; gap: 0.15rem; justify-content: flex-end; }
+.row-actions { display: flex; gap: 0.15rem; justify-content: center; padding: 0.4rem 0.3rem; }
 .icon-btn {
   display: inline-flex;
   align-items: center;

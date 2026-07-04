@@ -1,35 +1,96 @@
 import { useEffect, useRef, useState } from 'react'
 import { deleteEntry } from '../hooks/useEntries.js'
 import { cellText, dueLabel, urgencyOf, typeClass, statusClass } from '../utils/format.js'
-import { IconSort, IconEdit, IconTrash } from './icons.jsx'
+import { IconSort, IconTrash, IconPlus } from './icons.jsx'
 
+// edit: how a cell turns into an input when clicked
 export const COLUMNS = [
-  { key: 'no', label: '#', sortable: true, filterable: false, cls: 'col-no' },
-  { key: 'type', label: 'Type', sortable: true, filterable: true, cls: 'col-type' },
-  { key: 'task', label: 'Task', sortable: true, filterable: true, cls: 'col-task' },
-  { key: 'due', label: 'Due', sortable: true, filterable: true, cls: 'col-due' },
-  { key: 'assignees', label: 'Assignee(s)', sortable: true, filterable: true, cls: 'col-people' },
-  { key: 'status', label: 'Status', sortable: true, filterable: true, cls: 'col-status' },
-  { key: 'workType', label: 'Group / Ind.', sortable: true, filterable: true, cls: 'col-work' },
-  { key: 'deliverables', label: 'Deliverables', sortable: true, filterable: true, cls: 'col-deliver' },
+  { key: 'no', label: '#', sortable: true, filterable: false, cls: 'col-no', edit: null },
+  { key: 'type', label: 'Type', sortable: true, filterable: true, cls: 'col-type', edit: 'type' },
+  { key: 'subject', label: 'Subject', sortable: true, filterable: true, cls: 'col-subject', edit: 'text' },
+  { key: 'task', label: 'Task', sortable: true, filterable: true, cls: 'col-task', edit: 'textarea' },
+  { key: 'due', label: 'Due', sortable: true, filterable: true, cls: 'col-due', edit: 'date' },
+  { key: 'assignees', label: 'Assignee(s)', sortable: true, filterable: true, cls: 'col-people', edit: 'text' },
+  { key: 'status', label: 'Status', sortable: true, filterable: true, cls: 'col-status', edit: 'status' },
+  { key: 'workType', label: 'Group / Ind.', sortable: true, filterable: true, cls: 'col-work', edit: 'work' },
+  { key: 'deliverables', label: 'Deliverables', sortable: true, filterable: true, cls: 'col-deliver', edit: 'text' },
 ]
 
-function Cell({ row, col }) {
-  if (col.key === 'type') {
-    return row.type ? <span className={`tag ${typeClass(row.type)}`}>{row.type}</span> : null
-  }
-  if (col.key === 'status') {
-    return row.status ? <span className={`chip ${statusClass(row.status)}`}>{row.status}</span> : null
-  }
-  if (col.key === 'workType') {
-    return row.workType ? <span className="chip chip-outline">{row.workType}</span> : null
-  }
-  if (col.key === 'due') {
-    return <span className={`due due-${urgencyOf(row.due)}`}>{dueLabel(row.due)}</span>
-  }
+function Display({ row, col }) {
+  const v = row[col.key]
+  if (col.key === 'type') return v ? <span className={`tag ${typeClass(v)}`}>{v}</span> : <Empty />
+  if (col.key === 'status') return v ? <span className={`chip ${statusClass(v)}`}>{v}</span> : <Empty />
+  if (col.key === 'workType') return v ? <span className="chip chip-outline">{v}</span> : <Empty />
+  if (col.key === 'due') return v ? <span className={`due due-${urgencyOf(v)}`}>{dueLabel(v)}</span> : <Empty />
   if (col.key === 'no') return <span className="rownum">{row.no}</span>
-  if (col.key === 'task') return <span className="tasktext">{row.task}</span>
-  return cellText(row, col.key)
+  if (col.key === 'task') return v ? <span className="tasktext">{v}</span> : <Empty />
+  return v ? <span>{v}</span> : <Empty />
+}
+
+function Empty() {
+  return <span className="cell-empty">＋</span>
+}
+
+function EditableCell({ row, col, onCommit, canEdit }) {
+  const value = row[col.key] ?? ''
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(value)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!editing) setVal(value)
+  }, [value, editing])
+  useEffect(() => {
+    if (editing && ref.current) ref.current.focus()
+  }, [editing])
+
+  if (col.key === 'no') return <div className="cell-display"><span className="rownum">{row.no}</span></div>
+
+  function close(commit) {
+    setEditing(false)
+    if (commit && val !== value) onCommit(row.id, col.key, val)
+    else setVal(value)
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); close(false) }
+    else if (e.key === 'Enter' && col.edit !== 'textarea') { e.preventDefault(); close(true) }
+  }
+
+  if (editing) {
+    const common = {
+      ref,
+      value: val,
+      onChange: (e) => setVal(e.target.value),
+      onBlur: () => close(true),
+      onKeyDown: onKey,
+      className: 'cell-input',
+    }
+    if (col.edit === 'textarea') return <textarea rows={3} {...common} />
+    if (col.edit === 'work')
+      return (
+        <select {...common}>
+          <option value="">—</option>
+          <option value="Group">Group</option>
+          <option value="Individual">Individual</option>
+        </select>
+      )
+    if (col.edit === 'date') return <input type="datetime-local" {...common} />
+    const list = col.edit === 'type' ? 'type-options' : col.edit === 'status' ? 'status-options' : undefined
+    return <input type="text" list={list} {...common} />
+  }
+
+  return (
+    <div
+      className={`cell-display${canEdit ? ' editable' : ''}`}
+      onClick={canEdit ? () => setEditing(true) : undefined}
+      role={canEdit ? 'button' : undefined}
+      tabIndex={canEdit ? 0 : undefined}
+      onKeyDown={canEdit ? (e) => { if (e.key === 'Enter') { e.preventDefault(); setEditing(true) } } : undefined}
+      title={canEdit ? 'Click to edit' : undefined}
+    >
+      <Display row={row} col={col} />
+    </div>
+  )
 }
 
 function DeleteButton({ id, label }) {
@@ -57,14 +118,20 @@ function DeleteButton({ id, label }) {
   )
 }
 
-export default function EntryTable({ rows, sort, onSort, filters, onFilter, onEdit, animate }) {
+export default function EntryTable({ rows, sort, onSort, filters, onFilter, onCommit, onAddRow, canEdit, animate }) {
   return (
     <div className="table-wrap">
+      <datalist id="type-options">
+        <option value="Assignment" /><option value="Quiz" /><option value="Case-study" />
+        <option value="Project" /><option value="Exam" />
+      </datalist>
+      <datalist id="status-options">
+        <option value="Not started" /><option value="In progress" /><option value="Blocked" /><option value="Done" />
+      </datalist>
+
       <table className="grid">
         <colgroup>
-          {COLUMNS.map((c) => (
-            <col key={c.key} className={c.cls} />
-          ))}
+          {COLUMNS.map((c) => <col key={c.key} className={c.cls} />)}
           <col className="col-actions" />
         </colgroup>
         <thead>
@@ -113,24 +180,25 @@ export default function EntryTable({ rows, sort, onSort, filters, onFilter, onEd
             >
               {COLUMNS.map((c) => (
                 <td key={c.key} className={c.cls}>
-                  <Cell row={row} col={c} />
+                  <EditableCell row={row} col={c} onCommit={onCommit} canEdit={canEdit} />
                 </td>
               ))}
               <td className="col-actions">
                 <div className="row-actions">
-                  <button
-                    className="icon-btn"
-                    onClick={() => onEdit(row)}
-                    aria-label={`Edit task ${row.no}`}
-                    title="Edit"
-                  >
-                    <IconEdit />
-                  </button>
                   <DeleteButton id={row.id} label={`task ${row.no}`} />
                 </div>
               </td>
             </tr>
           ))}
+          {canEdit && (
+            <tr className="add-row">
+              <td colSpan={COLUMNS.length + 1}>
+                <button onClick={onAddRow}>
+                  <IconPlus size={14} /> Add task
+                </button>
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

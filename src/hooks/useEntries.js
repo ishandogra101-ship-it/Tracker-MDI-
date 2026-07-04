@@ -46,23 +46,20 @@ export function useEntries() {
   return { entries, loading, error }
 }
 
-const FIELDS = ['type', 'task', 'due', 'assignees', 'status', 'workType', 'deliverables']
+const FIELDS = ['type', 'subject', 'task', 'due', 'assignees', 'status', 'workType', 'deliverables']
 
-function pick(data) {
+export function addEntry(data = {}) {
+  const full = {}
+  for (const f of FIELDS) full[f] = data[f] ?? ''
+  return addDoc(collection(db, COLLECTION), { ...full, createdAt: serverTimestamp() })
+}
+
+// Partial update — only the provided fields are written, so inline edits of one
+// cell never clobber the rest of the row.
+export function updateEntry(id, patch) {
   const out = {}
-  for (const f of FIELDS) out[f] = data[f] ?? ''
-  return out
-}
-
-export function addEntry(data) {
-  return addDoc(collection(db, COLLECTION), {
-    ...pick(data),
-    createdAt: serverTimestamp(),
-  })
-}
-
-export function updateEntry(id, data) {
-  return updateDoc(doc(db, COLLECTION, id), pick(data))
+  for (const f of FIELDS) if (f in patch) out[f] = patch[f] ?? ''
+  return updateDoc(doc(db, COLLECTION, id), out)
 }
 
 export function deleteEntry(id) {

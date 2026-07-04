@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isConfigured } from './firebase.js'
-import { useEntries } from './hooks/useEntries.js'
+import { useEntries, addEntry, updateEntry } from './hooks/useEntries.js'
 import EntryTable, { COLUMNS } from './components/EntryTable.jsx'
-import EntryModal from './components/EntryModal.jsx'
 import { cellText, dueSortKey } from './utils/format.js'
 import { exportToExcel } from './utils/exportExcel.js'
 import { IconPlus, IconExport, IconSearch } from './components/icons.jsx'
 
 export default function App() {
   const { entries, loading, error } = useEntries()
-  const [modal, setModal] = useState(null) // null | { entry? }
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState({})
   const [sort, setSort] = useState({ key: 'no', dir: 'asc' })
   const [animate, setAnimate] = useState(true)
 
-  // Only run the staggered entry animation on first paint, not on every snapshot.
+  // Staggered entry animation on first paint only, not on every snapshot.
   useEffect(() => {
     if (!loading && entries.length) {
       const t = setTimeout(() => setAnimate(false), 900)
@@ -28,6 +26,16 @@ export default function App() {
   }
   function setFilter(key, value) {
     setFilters((f) => ({ ...f, [key]: value }))
+  }
+  function commitCell(id, key, value) {
+    updateEntry(id, { [key]: value })
+  }
+  function addRow() {
+    // Clear filters/search + sort by insertion order so the new blank row is visible at the bottom.
+    setSearch('')
+    setFilters({})
+    setSort({ key: 'no', dir: 'asc' })
+    addEntry({ workType: 'Group', status: 'Not started' })
   }
 
   const displayRows = useMemo(() => {
@@ -52,13 +60,14 @@ export default function App() {
   }, [entries, search, filters, sort])
 
   const activeFilters = search.trim() || Object.values(filters).some(Boolean)
+  const showTable = isConfigured && !loading && !error
 
   return (
     <div className="app">
       <header className="masthead">
         <div className="mast-left">
           <h1>Class&nbsp;Tracker</h1>
-          <p>Shared assignment and quiz log for the group. Everyone reads and edits the same table, live.</p>
+          <p>Shared assignment and quiz log for the group. Click any cell to edit; everyone sees it live.</p>
         </div>
         <div className="mast-right">
           <span className="count">{displayRows.length}</span>
@@ -88,38 +97,34 @@ export default function App() {
           />
         </div>
         <div className="toolbar-actions">
-          <button
-            className="btn"
-            onClick={() => exportToExcel(displayRows)}
-            disabled={displayRows.length === 0}
-          >
+          <button className="btn" onClick={() => exportToExcel(displayRows)} disabled={displayRows.length === 0}>
             <span><IconExport /> Export .xlsx</span>
           </button>
-          <button className="btn btn-accent" onClick={() => setModal({})} disabled={!isConfigured}>
-            <span><IconPlus /> New task</span>
+          <button className="btn btn-accent" onClick={addRow} disabled={!isConfigured}>
+            <span><IconPlus /> Add task</span>
           </button>
         </div>
       </div>
 
       {isConfigured && loading ? (
         <p className="empty">Loading…</p>
-      ) : entries.length === 0 && !error ? (
-        <p className="empty">No tasks yet. Hit “New task” to add the first row.</p>
-      ) : displayRows.length === 0 ? (
-        <p className="empty">Nothing matches the current filters.</p>
-      ) : (
+      ) : showTable ? (
         <EntryTable
           rows={displayRows}
           sort={sort}
           onSort={toggleSort}
           filters={filters}
           onFilter={setFilter}
-          onEdit={(entry) => setModal({ entry })}
+          onCommit={commitCell}
+          onAddRow={addRow}
+          canEdit={isConfigured}
           animate={animate}
         />
-      )}
+      ) : null}
 
-      {modal && <EntryModal entry={modal.entry} onClose={() => setModal(null)} />}
+      {showTable && entries.length > 0 && displayRows.length === 0 && (
+        <p className="empty">Nothing matches the current filters.</p>
+      )}
     </div>
   )
 }

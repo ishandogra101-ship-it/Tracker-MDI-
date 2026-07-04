@@ -4,6 +4,7 @@ import { dueLabel } from './format.js'
 const COLUMNS = [
   ['Task No.', (r) => r.no],
   ['Type', (r) => r.type],
+  ['Subject', (r) => r.subject],
   ['Task', (r) => r.task],
   ['Due', (r) => dueLabel(r.due)],
   ['Assignee(s)', (r) => r.assignees],
@@ -23,6 +24,7 @@ export function exportToExcel(rows) {
   ws['!cols'] = [
     { wch: 8 },
     { wch: 14 },
+    { wch: 18 },
     { wch: 48 },
     { wch: 22 },
     { wch: 24 },

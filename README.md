@@ -4,10 +4,10 @@ A shared assignment/quiz tracker for a trusted class group, presented as a live 
 
 **Features**
 
-- Dense, gridlined table — columns: Task No., Type, Task, Due, Assignee(s), Status, Group/Individual, Deliverables.
+- Dense, gridlined table — columns: Task No., Type, Subject, Task, Due, Assignee(s), Status, Group/Individual, Deliverables.
 - Click any column header to sort; per-column filter row plus a global search box.
 - Export the current (filtered/sorted) view to a real `.xlsx` file.
-- Add / edit tasks via a modal; two-step confirm on delete. All edits sync live to every viewer via `onSnapshot`.
+- Edit in place: click any cell to edit it inline (Enter or click-away saves, Esc cancels). Add rows with the “Add task” button/row; two-step confirm on delete. All edits sync live to every viewer via `onSnapshot`.
 - Editorial design: off-white canvas, burnt-orange accent, Space Grotesk + Lora.
 
 Live URL (once deployed): **https://ishandogra101-ship-it.github.io/Tracker-MDI-/**
